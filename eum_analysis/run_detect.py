@@ -118,6 +118,14 @@ print("\n[Part B] MI 구조적 동인 (RandomForest + SHAP, 탐색적 n=13)")
 print("-" * 60)
 
 features = ['LRR', 'CDI', 'NAR', 'AGI', 'YR', 'STI', 'TREND']
+# 지표 약어에 한글 풀이 병기 (그림 가독성)
+GLOSS = {
+    'MI': 'MI(소비-유동 불일치)', 'CPC': 'CPC(1인당 월소비)',
+    'LRR': 'LRR(경남권 소비자 비중)', 'CDI': 'CDI(업종 다양성)',
+    'NAR': 'NAR(야간 활성도)', 'AGI': 'AGI(고령 소비비중)',
+    'YR': 'YR(청년 소비비중)', 'STI': 'STI(관광 의존도)',
+    'TREND': 'TREND(매출 추세)',
+}
 X = ind[features].copy()
 y = ind['MI'].copy()
 
@@ -158,7 +166,7 @@ fig, ax = plt.subplots(figsize=(9, 6))
 gi = glob_imp.sort_values()
 ax.barh(range(len(gi)), gi.values, color='#2A6F97')
 ax.set_yticks(range(len(gi)))
-ax.set_yticklabels(gi.index, fontsize=11)
+ax.set_yticklabels([GLOSS.get(f, f) for f in gi.index], fontsize=10)
 ax.set_xlabel('평균 |SHAP| (MI 설명 기여도)', fontsize=12, fontweight='bold')
 ax.set_title('이음-Detect ② 소비-유동 불일치(MI)의 구조적 동인\n'
              'RandomForest + SHAP (탐색적, n=13)', fontsize=14, fontweight='bold')

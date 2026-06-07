@@ -189,9 +189,9 @@ print(profile.to_string())
 def name_cluster_v2(profile_row):
     """
     클러스터 평균 프로파일에 기반한 분류:
-    - 상대적 양호형: MI 양수 & 경남권 소비자 비중/CPC 우수
-    - 외부의존+소비전환 취약형: LRR 낮음(<0.78) + MI 음수
-    - 소비전환 취약형: MI 음수 + LRR 양호 (유동은 있는데 소비가 못 따라옴)
+    - 소비 안정형: MI 양수 & 경남권 소비자 비중/CPC 우수
+    - 외지방문 의존형: LRR 낮음(<0.78) + MI 음수
+    - 방문대비 소비부족형: MI 음수 + LRR 양호 (유동은 있는데 소비가 못 따라옴)
     - 혈류 부족형: CPC 매우 낮음 + 생활인구 낮음
     - 만성 노화형: AGI 높음 + 추세 음수
     """
@@ -204,11 +204,11 @@ def name_cluster_v2(profile_row):
 
     # 1. 상대적 양호 그룹
     if mi > 0.5 and lrr > 0.85 and cpc > 50000:
-        return '상대적 양호형'
+        return '소비 안정형'
 
     # 2. 외부의존 + 소비전환 취약 복합
     if lrr < 0.78 and mi < -0.3:
-        return '외부의존+소비전환 취약형'
+        return '외지방문 의존형'
 
     # 3. 외부의존 단독
     if lrr < 0.78:
@@ -216,7 +216,7 @@ def name_cluster_v2(profile_row):
 
     # 4. 소비전환 취약 (MI 매우 낮음, LRR은 양호)
     if mi < -0.5:
-        return '소비전환 취약형'
+        return '방문대비 소비부족형'
 
     # 5. 만성 노화 + 매출 감소
     if agi > 0.235 and trend < 0:
@@ -226,7 +226,7 @@ def name_cluster_v2(profile_row):
     if cpc < 25000 and lp < 250000:
         return '혈류 부족형'
 
-    return '경계형 (혼합)'
+    return '혼합 경계형'
 
 profile['유형명'] = profile.apply(name_cluster_v2, axis=1)
 cluster_names = profile['유형명'].to_dict()
@@ -279,12 +279,12 @@ print("-"*60)
 # 색상
 type_colors = {
     '혈류 부족형':            '#9333EA',  # 보라
-    '소비전환 취약형':        '#E63946',  # 빨강
+    '방문대비 소비부족형':        '#E63946',  # 빨강
     '만성 노화형':            '#F4A261',  # 주황
     '외부유입 의존형':        '#E76F51',  # 진주황
-    '외부의존+소비전환 취약형': '#A30015',  # 진빨강
-    '상대적 양호형':          '#2A9D8F',  # 청록 (건강)
-    '경계형 (혼합)':          '#888888',  # 회색
+    '외지방문 의존형': '#A30015',  # 진빨강
+    '소비 안정형':          '#2A9D8F',  # 청록 (건강)
+    '혼합 경계형':          '#888888',  # 회색
 }
 
 # --- Figure 1: MI × LRR 진단 매트릭스 (핵심 시각화) ---

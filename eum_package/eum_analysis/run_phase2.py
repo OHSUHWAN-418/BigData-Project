@@ -10,7 +10,7 @@
   남해, 하동, 산청, 함양, 거창, 합천)
 
 [산출 지표]
-  - LRR : 경남권 소비자 비중
+  - LRR : 지역 자금 환류율
   - CDI : 소비 다양성 지수 (Shannon Entropy)
   - NAR : 야간 활성도 비율
   - AGI : 고령 소비 비중
@@ -24,19 +24,18 @@
   1) 혈류 부족형 : 생활인구 자체 부족
   2) 소화 불량형 : 유동 있으나 소비 부진 (MI 음수)
   3) 만성 노화형 : 고령 의존 + 노화
-  4) 외부의존형   : 경남 외 소비자 비중이 높은 구조
+  4) 출혈성       : 자금 역외 유출
 """
 import sys
+import os
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parent
-sys.path.insert(0, str(PROJECT_ROOT / 'modules'))
+# 스크립트 위치 기준으로 modules 경로 자동 설정
+_HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(_HERE / 'modules'))
 
 import pandas as pd
 import numpy as np
-import matplotlib
-
-matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 from sklearn.cluster import KMeans
@@ -49,22 +48,13 @@ from living_pop_loader import load_living_population, aggregate_by_region, aggre
 from indicators import calculate_lrr, calculate_cdi, calculate_nar, calculate_agi, calculate_youth_ratio, calculate_sales_trend
 
 # 한글 폰트
-for font_path in [Path('C:/Windows/Fonts/malgun.ttf'), Path('C:/Windows/Fonts/NanumGothic.ttf')]:
-    if font_path.exists():
-        fm.fontManager.addfont(str(font_path))
 fonts = [f.name for f in fm.fontManager.ttflist if 'Nanum' in f.name]
-malgun_fonts = [f.name for f in fm.fontManager.ttflist if 'Malgun' in f.name]
-plt.rcParams['font.family'] = fonts[0] if fonts else (malgun_fonts[0] if malgun_fonts else 'DejaVu Sans')
+plt.rcParams['font.family'] = fonts[0] if fonts else 'DejaVu Sans'
 plt.rcParams['axes.unicode_minus'] = False
 
-OUT = PROJECT_ROOT / 'phase2'
-OUT.mkdir(parents=True, exist_ok=True)
-
-# 위험점수 표준 산식 가중치 (심사 방어용으로 보고서에 명시)
-# - 모든 지표를 13개 지역 min-max 정규화 후, 낮을수록 위험인 지표는 부호 반전(-)
-# - MI: 핵심 지표(소비-유동 불일치), CPC: 1인당 소비력,
-#   LRR: 외부의존, TREND: 매출 추세
-RISK_WEIGHTS = {'MI': 0.40, 'CPC': 0.25, 'LRR': 0.20, 'TREND': 0.15}
+# 출력 폴더 (스크립트 위치 기준)
+OUT = str(_HERE / 'phase2')
+os.makedirs(OUT, exist_ok=True)
 
 print("="*70)
 print("「이음(E-um)」 Phase 2 통합 분석 시작")
@@ -189,9 +179,9 @@ print(profile.to_string())
 def name_cluster_v2(profile_row):
     """
     클러스터 평균 프로파일에 기반한 분류:
-    - 상대적 양호형: MI 양수 & 경남권 소비자 비중/CPC 우수
-    - 외부의존+소비전환 취약형: LRR 낮음(<0.78) + MI 음수
-    - 소비전환 취약형: MI 음수 + LRR 양호 (유동은 있는데 소비가 못 따라옴)
+    - 상대적 양호형: MI 양수 & LRR/CPC 우수
+    - 출혈성+소화불량 복합: LRR 매우 낮음(<0.78) + MI 음수
+    - 소화 불량형: MI 음수 + LRR 양호 (유동은 있는데 소비가 못 따라옴)
     - 혈류 부족형: CPC 매우 낮음 + 생활인구 낮음
     - 만성 노화형: AGI 높음 + 추세 음수
     """
@@ -206,17 +196,17 @@ def name_cluster_v2(profile_row):
     if mi > 0.5 and lrr > 0.85 and cpc > 50000:
         return '상대적 양호형'
 
-    # 2. 외부의존 + 소비전환 취약 복합
+    # 2. 출혈성 + 소화 불량 복합 (가장 위험)
     if lrr < 0.78 and mi < -0.3:
-        return '외부의존+소비전환 취약형'
+        return '출혈+소화 복합형'
 
-    # 3. 외부의존 단독
+    # 3. 출혈성 단독
     if lrr < 0.78:
-        return '외부유입 의존형'
+        return '출혈성(자금 유출형)'
 
-    # 4. 소비전환 취약 (MI 매우 낮음, LRR은 양호)
+    # 4. 소화 불량 (MI 매우 낮음, LRR은 양호)
     if mi < -0.5:
-        return '소비전환 취약형'
+        return '소화 불량형'
 
     # 5. 만성 노화 + 매출 감소
     if agi > 0.235 and trend < 0:
@@ -244,21 +234,20 @@ for c in range(K):
 print("\n[5/6] 우선 처방 대상 도출")
 print("-"*60)
 
-def minmax(s):
-    """13개 지역 min-max 정규화 (낮을수록 위험인 지표는 호출 측에서 부호 반전)."""
-    span = s.max() - s.min()
-    if span == 0:
-        return s * 0
-    return (s - s.min()) / span
+# ── 위험점수 (표준 산식) ───────────────────────────────────────
+# 모든 지표를 13개 지역 min-max 정규화 후, '낮을수록 위험'인 지표는 부호 반전.
+# 가중치는 본 연구 핵심 가설(소비-유동 불일치 MI)에 최대 비중 부여.
+# 산식을 보고서에 그대로 공개하여 심사 재현성 확보.
+RISK_WEIGHTS = {'MI': 0.40, 'CPC': 0.25, 'LRR': 0.20, 'TREND': 0.15}
 
+def _minmax(s):
+    return (s - s.min()) / (s.max() - s.min())
 
-# 위험점수 = Σ minmax(-X_i) * w_i,  X_i ∈ {MI, CPC, LRR, TREND}
-# 가중치는 RISK_WEIGHTS 상수로 분리(보고서·심사 방어용).
 indicators['위험점수'] = (
-    minmax(-indicators['MI'])    * RISK_WEIGHTS['MI']    +
-    minmax(-indicators['CPC'])   * RISK_WEIGHTS['CPC']   +
-    minmax(-indicators['LRR'])   * RISK_WEIGHTS['LRR']   +
-    minmax(-indicators['TREND']) * RISK_WEIGHTS['TREND']
+    _minmax(-indicators['MI'])    * RISK_WEIGHTS['MI'] +
+    _minmax(-indicators['CPC'])   * RISK_WEIGHTS['CPC'] +
+    _minmax(-indicators['LRR'])   * RISK_WEIGHTS['LRR'] +
+    _minmax(-indicators['TREND']) * RISK_WEIGHTS['TREND']
 )
 
 priority = indicators.sort_values('위험점수', ascending=False)
@@ -279,10 +268,10 @@ print("-"*60)
 # 색상
 type_colors = {
     '혈류 부족형':            '#9333EA',  # 보라
-    '소비전환 취약형':        '#E63946',  # 빨강
+    '소화 불량형':            '#E63946',  # 빨강
     '만성 노화형':            '#F4A261',  # 주황
-    '외부유입 의존형':        '#E76F51',  # 진주황
-    '외부의존+소비전환 취약형': '#A30015',  # 진빨강
+    '출혈성(자금 유출형)':    '#E76F51',  # 진주황
+    '출혈+소화 복합형':       '#A30015',  # 진빨강 (가장 위험)
     '상대적 양호형':          '#2A9D8F',  # 청록 (건강)
     '경계형 (혼합)':          '#888888',  # 회색
 }
@@ -307,17 +296,17 @@ ax.axvline(0, color='gray', linestyle='--', alpha=0.5)
 ax.axhline(indicators['LRR'].median(), color='gray', linestyle='--', alpha=0.5)
 
 # 사분면 라벨
-ax.text(0.02, 0.98, '소비-유동 불일치 ↑\n(소비전환 취약 위험)',
+ax.text(0.02, 0.98, '소비-유동 불일치 ↑\n(소화 불량형 위험)',
         transform=ax.transAxes, fontsize=11, fontweight='bold',
         color='#C00000', va='top',
         bbox=dict(boxstyle='round', facecolor='#FFF0F0', alpha=0.8))
-ax.text(0.98, 0.02, '소비-유동 균형 ↑\n경남권 소비자 비중 ↑\n(안정 상권)',
+ax.text(0.98, 0.02, '소비-유동 균형 ↑\n자금 환류 ↑\n(건강 상권)',
         transform=ax.transAxes, fontsize=11, fontweight='bold',
         color='#2A9D8F', ha='right',
         bbox=dict(boxstyle='round', facecolor='#E8F5F2', alpha=0.8))
 
-ax.set_xlabel('MI (소비-유동 불일치 지수) →  음수=소비전환 취약', fontsize=12, fontweight='bold')
-ax.set_ylabel('LRR (경남권 소비자 비중) →', fontsize=12, fontweight='bold')
+ax.set_xlabel('MI (소비-유동 불일치 지수) →  음수=소화불량', fontsize=12, fontweight='bold')
+ax.set_ylabel('LRR (지역 자금 환류율) →', fontsize=12, fontweight='bold')
 ax.set_title('「이음(E-um)」 Phase 2 진단 매트릭스 (원 크기 = 연평균 생활인구)',
              fontsize=14, fontweight='bold')
 ax.legend(loc='center left', fontsize=10)
@@ -331,8 +320,8 @@ print("  ✓ p2_fig1_MI_LRR_matrix.png")
 fig, axes = plt.subplots(2, 2, figsize=(16, 11))
 axes = axes.flatten()
 metrics = [
-    ('MI',  '소비-유동 불일치 (↓일수록 소비전환 취약)', False),
-    ('LRR', '경남권 소비자 비중 (↓일수록 외부유입 의존)', False),
+    ('MI',  '소비-유동 불일치 (↓일수록 소화불량)', False),
+    ('LRR', '지역 자금 환류율 (↓일수록 출혈)', False),
     ('CPC', '1인당 월 소비액 (원) (↓일수록 구매력 약함)', False),
     ('STI', '계절 관광 의존도 (↑일수록 관광 의존)', True),
 ]
@@ -418,9 +407,9 @@ print("\n" + "="*70)
 print("Phase 2 분석 완료")
 print("="*70)
 print(f"\n[핵심 인사이트]")
-print(f"  • MI 최저 (소비전환 취약 1위): {indicators['MI'].idxmin()} (MI={indicators['MI'].min():.3f})")
+print(f"  • MI 최저 (소화불량형 1위): {indicators['MI'].idxmin()} (MI={indicators['MI'].min():.3f})")
 print(f"  • MI 최고 (소비-유동 균형): {indicators['MI'].idxmax()} (MI={indicators['MI'].max():.3f})")
-print(f"  • LRR 최저 (외부유입 의존): {indicators['LRR'].idxmin()} ({indicators['LRR'].min():.3f})")
+print(f"  • LRR 최저 (출혈 심각)   : {indicators['LRR'].idxmin()} ({indicators['LRR'].min():.3f})")
 print(f"  • CPC 최저 (구매력 약함) : {indicators['CPC'].idxmin()} ({indicators['CPC'].min():,.0f}원/월)")
 print(f"  • CPC 최고 (구매력 높음) : {indicators['CPC'].idxmax()} ({indicators['CPC'].max():,.0f}원/월)")
 print(f"  • STI 최고 (관광 의존)   : {indicators['STI'].idxmax()} (STI={indicators['STI'].max():.3f})")

@@ -5,47 +5,18 @@
 - 유동인구 데이터 추후 결합용 인터페이스 제공
 """
 import pandas as pd
+import numpy as np
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-
-DATA_DIR_CANDIDATES = [
-    PROJECT_ROOT / 'data',
-    PROJECT_ROOT.parent / 'eum_package' / 'data',
-    PROJECT_ROOT.parent.parent / '원천데이터',
-    PROJECT_ROOT.parent.parent,
-    Path('/mnt/user-data/uploads'),
-]
-
-CARD_FILE_CANDIDATES = {
-    'monthly': [
-        '2024년+경상남도+지역별+월별+카드매출현황.csv',
-        '2024년_경상남도_지역별_월별_카드매출현황.csv',
-    ],
-    'hourly': [
-        '2024년+경상남도+지역별+시간대별+카드매출현황.csv',
-        '2024년_경상남도_지역별_시간대별_카드매출현황.csv',
-    ],
-    'demographic': [
-        '2024년+경상남도+지역별+성연령별+카드매출현황.csv',
-        '2024년_경상남도_지역별_성연령별_카드매출현황.csv',
-    ],
-}
-
-
-def resolve_data_file(kind: str) -> Path:
-    """프로젝트 data 폴더와 원자료 수신 폴더에서 입력 CSV를 찾는다."""
-    for base_dir in DATA_DIR_CANDIDATES:
-        for filename in CARD_FILE_CANDIDATES[kind]:
-            path = base_dir / filename
-            if path.exists():
-                return path
-    searched = [
-        str(base_dir / filename)
-        for base_dir in DATA_DIR_CANDIDATES
-        for filename in CARD_FILE_CANDIDATES[kind]
-    ]
-    raise FileNotFoundError(f"{kind} 카드매출 CSV를 찾지 못했습니다. 확인 경로: {searched}")
+# 프로젝트 루트 기준 data 폴더 자동 탐색
+# (modules/ -> eum_analysis/ -> 프로젝트루트/data)
+_HERE = Path(__file__).resolve()
+_PROJECT_ROOT = _HERE.parent.parent.parent  # modules -> eum_analysis -> root
+UPLOAD_DIR = _PROJECT_ROOT / 'data'
+# 환경변수로 덮어쓰기 가능
+import os
+if os.environ.get('EUM_DATA_DIR'):
+    UPLOAD_DIR = Path(os.environ['EUM_DATA_DIR'])
 
 # 시군구명 표준화 매핑 (유동 데이터가 다른 표기로 와도 통일)
 SIGUNGU_STANDARD = {
@@ -77,7 +48,8 @@ def standardize_sigungu(name: str) -> str:
 
 def load_monthly():
     """월별 카드 매출 데이터 로딩"""
-    df = pd.read_csv(resolve_data_file('monthly'), encoding='cp949')
+    df = pd.read_csv(UPLOAD_DIR / '2024년_경상남도_지역별_월별_카드매출현황.csv',
+                     encoding='cp949')
     df['시군구명'] = df['시군구명'].apply(standardize_sigungu)
     df['연월'] = df['연월'].astype(str)
     df['월'] = df['연월'].str[-2:].astype(int)
@@ -86,14 +58,16 @@ def load_monthly():
 
 def load_hourly():
     """시간대별 카드 매출 데이터 로딩"""
-    df = pd.read_csv(resolve_data_file('hourly'), encoding='cp949')
+    df = pd.read_csv(UPLOAD_DIR / '2024년_경상남도_지역별_시간대별_카드매출현황.csv',
+                     encoding='cp949')
     df['시군구명'] = df['시군구명'].apply(standardize_sigungu)
     return df
 
 
 def load_demographic():
     """성연령별 카드 매출 데이터 로딩"""
-    df = pd.read_csv(resolve_data_file('demographic'), encoding='cp949')
+    df = pd.read_csv(UPLOAD_DIR / '2024년_경상남도_지역별_성연령별_카드매출현황.csv',
+                     encoding='cp949')
     df['시군구명'] = df['시군구명'].apply(standardize_sigungu)
     df['연월'] = df['연월'].astype(str)
     return df

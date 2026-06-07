@@ -1,0 +1,11 @@
+# 세션·빌드·캐시 (작업 산출물 아님)
+.claude/
+_docx_build/
+**/__pycache__/
+*.pyc
+
+# 중복 압축본
+eum_package.zip
+
+# 임시 docx 작업 폴더
+**/unpacked_*/

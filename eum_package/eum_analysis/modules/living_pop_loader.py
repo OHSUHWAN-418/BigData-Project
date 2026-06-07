@@ -11,25 +11,13 @@ KOSIS 인구감소지역 생활인구 통계 (101_DT_1YL12002E)
 import pandas as pd
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-DATA_DIR_CANDIDATES = [
-    PROJECT_ROOT / 'data',
-    PROJECT_ROOT.parent / 'eum_package' / 'data',
-    PROJECT_ROOT.parent.parent / '원천데이터',
-    PROJECT_ROOT.parent.parent,
-    Path('/mnt/user-data/uploads'),
-]
+_HERE = Path(__file__).resolve()
+_PROJECT_ROOT = _HERE.parent.parent.parent
+UPLOAD_DIR = _PROJECT_ROOT / 'data'
+import os
+if os.environ.get('EUM_DATA_DIR'):
+    UPLOAD_DIR = Path(os.environ['EUM_DATA_DIR'])
 FILE_NAME = '101_DT_1YL12002E_20260528202844.csv'
-
-
-def resolve_living_population_file() -> Path:
-    """프로젝트 data 폴더와 원자료 수신 폴더에서 생활인구 CSV를 찾는다."""
-    for base_dir in DATA_DIR_CANDIDATES:
-        path = base_dir / FILE_NAME
-        if path.exists():
-            return path
-    searched = [str(base_dir / FILE_NAME) for base_dir in DATA_DIR_CANDIDATES]
-    raise FileNotFoundError(f"생활인구 CSV를 찾지 못했습니다. 확인 경로: {searched}")
 
 # 카드 데이터의 시군구명 표기와 일치시키는 매핑
 LIVING_POP_NAME_MAP = {
@@ -60,7 +48,13 @@ def load_living_population():
     -------
     DataFrame : columns = [시군구명, 지역구분(감소/관심), 연령대, 월, 생활인구]
     """
-    df = pd.read_csv(resolve_living_population_file(), encoding='cp949')
+    # 101_DT_1YL12002E 로 시작하는 생활인구 파일 자동 탐색 (타임스탬프 무관)
+    candidates = sorted(UPLOAD_DIR.glob('101_DT_1YL12002E*.csv'))
+    if not candidates:
+        raise FileNotFoundError(
+            f"생활인구 파일(101_DT_1YL12002E*.csv)을 {UPLOAD_DIR}에서 찾을 수 없습니다."
+        )
+    df = pd.read_csv(candidates[0], encoding='cp949')
 
     # 빈 컬럼 제거
     df = df.drop(columns=[c for c in df.columns if 'Unnamed' in c])

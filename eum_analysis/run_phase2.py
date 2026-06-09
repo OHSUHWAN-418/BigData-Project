@@ -275,7 +275,7 @@ type_colors = {
     '혼합 경계형':          '#888888',  # 회색
 }
 
-# --- Figure 1: MI × LRR 진단 매트릭스 (핵심 시각화) ---
+# --- Figure 1: MI × LRR 분석 매트릭스 (핵심 시각화) ---
 fig, ax = plt.subplots(figsize=(12, 9))
 for type_name, color in type_colors.items():
     mask = indicators['침체유형'] == type_name
@@ -304,9 +304,9 @@ ax.text(0.98, 0.02, '소비-유동 균형 ↑\n경남권 소비자 비중 ↑\n(
         color='#2A9D8F', ha='right',
         bbox=dict(boxstyle='round', facecolor='#E8F5F2', alpha=0.8))
 
-ax.set_xlabel('MI (소비-유동 불일치 지수) →  음수=소비전환 취약', fontsize=12, fontweight='bold')
+ax.set_xlabel('MI (생활인구 대비 카드소비 수준) →  음수=소비전환 취약', fontsize=12, fontweight='bold')
 ax.set_ylabel('LRR (경남권 소비자 비중) →  낮음=경남 외 소비 의존', fontsize=12, fontweight='bold')
-ax.set_title('「이음(E-um)」 Phase 2 진단 매트릭스 (원 크기 = 연평균 생활인구)',
+ax.set_title('「이음(E-um)」 Phase 2 분석 매트릭스 (원 크기 = 연평균 생활인구)',
              fontsize=14, fontweight='bold')
 ax.legend(loc='center left', fontsize=10)
 ax.grid(alpha=0.3)

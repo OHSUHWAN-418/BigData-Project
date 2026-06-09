@@ -43,10 +43,7 @@ TARGET_REGIONS = ['통영시', '사천시', '밀양시', '의령군', '함안군
 
 # 보고서와 통일한 유형 색상
 type_colors = {
-    '혈류 부족형':            '#9333EA',
     '방문대비 소비부족형':        '#E63946',
-    '만성 노화형':            '#F4A261',
-    '외부유입 의존형':        '#E76F51',
     '외지방문 의존형': '#A30015',
     '소비 안정형':          '#2A9D8F',
     '혼합 경계형':          '#9AA0A6',
@@ -122,7 +119,7 @@ m.plot(ax=ax, column='위험점수', cmap='Reds', edgecolor='#444', linewidth=0.
        legend=True, legend_kwds={'label': '위험점수 (높을수록 우선 처방)', 'shrink': 0.6})
 _annotate(ax, m, extra=lambda r: f"{r['순위']}위·{r['위험점수']:.2f}")
 
-ax.set_title('「이음(E-um)」 위험점수 지도 — 우선 처방 대상',
+ax.set_title('「이음(E-um)」 위험점수 지도 — 우선 개선 대상',
              fontsize=16, fontweight='bold')
 ax.axis('off')
 plt.tight_layout()

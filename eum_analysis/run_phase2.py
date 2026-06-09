@@ -21,10 +21,10 @@
   - CPC : 1인당 소비 ★ Phase 2 신규
 
 [침체 4유형 분류]
-  1) 혈류 부족형 : 생활인구 자체 부족
-  2) 소화 불량형 : 유동 있으나 소비 부진 (MI 음수)
-  3) 만성 노화형 : 고령 의존 + 노화
-  4) 외부의존형   : 경남 외 소비자 비중이 높은 구조
+  1) 외지방문 의존형 : 경남 외 소비자 비중이 높고 소비전환도 취약
+  2) 방문대비 소비부족형 : 생활인구는 있으나 카드소비가 낮음
+  3) 혼합 경계형 : 위험 신호가 섞여 있어 모니터링 필요
+  4) 소비 안정형 : 생활인구 대비 소비전환이 상대적으로 양호
 """
 import sys
 from pathlib import Path
@@ -63,7 +63,7 @@ OUT.mkdir(parents=True, exist_ok=True)
 # 위험점수 표준 산식 가중치 (심사 방어용으로 보고서에 명시)
 # - 모든 지표를 13개 지역 min-max 정규화 후, 낮을수록 위험인 지표는 부호 반전(-)
 # - MI: 핵심 지표(소비-유동 불일치), CPC: 1인당 소비력,
-#   LRR: 외부의존, TREND: 매출 추세
+#   LRR: 경남 외 소비 의존, TREND: 매출 추세
 RISK_WEIGHTS = {'MI': 0.40, 'CPC': 0.25, 'LRR': 0.20, 'TREND': 0.15}
 
 print("="*70)
@@ -192,8 +192,7 @@ def name_cluster_v2(profile_row):
     - 소비 안정형: MI 양수 & 경남권 소비자 비중/CPC 우수
     - 외지방문 의존형: LRR 낮음(<0.78) + MI 음수
     - 방문대비 소비부족형: MI 음수 + LRR 양호 (유동은 있는데 소비가 못 따라옴)
-    - 혈류 부족형: CPC 매우 낮음 + 생활인구 낮음
-    - 만성 노화형: AGI 높음 + 추세 음수
+    - 혼합 경계형: 특정 단일 유형으로 고정하기 어려운 경계 지역
     """
     mi = profile_row['MI']
     lrr = profile_row['LRR']
@@ -206,25 +205,17 @@ def name_cluster_v2(profile_row):
     if mi > 0.5 and lrr > 0.85 and cpc > 50000:
         return '소비 안정형'
 
-    # 2. 외부의존 + 소비전환 취약 복합
+    # 2. 경남 외 소비 의존 + 소비전환 취약 복합
     if lrr < 0.78 and mi < -0.3:
         return '외지방문 의존형'
 
-    # 3. 외부의존 단독
+    # 3. 경남 외 소비자 비중이 높은 단독 신호
     if lrr < 0.78:
-        return '외부유입 의존형'
+        return '외지방문 의존형'
 
     # 4. 소비전환 취약 (MI 매우 낮음, LRR은 양호)
     if mi < -0.5:
         return '방문대비 소비부족형'
-
-    # 5. 만성 노화 + 매출 감소
-    if agi > 0.235 and trend < 0:
-        return '만성 노화형'
-
-    # 6. 혈류 부족 (생활인구·구매력 모두 낮음)
-    if cpc < 25000 and lp < 250000:
-        return '혈류 부족형'
 
     return '혼합 경계형'
 
@@ -239,9 +230,9 @@ for c in range(K):
     print(f"               → {', '.join(members)}")
 
 # ============================================================
-# STEP 5. 우선 처방 대상 시군 도출
+# STEP 5. 우선 개선 대상 시군 도출
 # ============================================================
-print("\n[5/6] 우선 처방 대상 도출")
+print("\n[5/6] 우선 개선 대상 도출")
 print("-"*60)
 
 def minmax(s):
@@ -278,10 +269,7 @@ print("-"*60)
 
 # 색상
 type_colors = {
-    '혈류 부족형':            '#9333EA',  # 보라
     '방문대비 소비부족형':        '#E63946',  # 빨강
-    '만성 노화형':            '#F4A261',  # 주황
-    '외부유입 의존형':        '#E76F51',  # 진주황
     '외지방문 의존형': '#A30015',  # 진빨강
     '소비 안정형':          '#2A9D8F',  # 청록 (건강)
     '혼합 경계형':          '#888888',  # 회색
@@ -317,7 +305,7 @@ ax.text(0.98, 0.02, '소비-유동 균형 ↑\n경남권 소비자 비중 ↑\n(
         bbox=dict(boxstyle='round', facecolor='#E8F5F2', alpha=0.8))
 
 ax.set_xlabel('MI (소비-유동 불일치 지수) →  음수=소비전환 취약', fontsize=12, fontweight='bold')
-ax.set_ylabel('LRR (경남권 소비자 비중) →', fontsize=12, fontweight='bold')
+ax.set_ylabel('LRR (경남권 소비자 비중) →  낮음=경남 외 소비 의존', fontsize=12, fontweight='bold')
 ax.set_title('「이음(E-um)」 Phase 2 진단 매트릭스 (원 크기 = 연평균 생활인구)',
              fontsize=14, fontweight='bold')
 ax.legend(loc='center left', fontsize=10)
@@ -332,7 +320,7 @@ fig, axes = plt.subplots(2, 2, figsize=(16, 11))
 axes = axes.flatten()
 metrics = [
     ('MI',  '소비-유동 불일치 (↓일수록 소비전환 취약)', False),
-    ('LRR', '경남권 소비자 비중 (↓일수록 외부유입 의존)', False),
+    ('LRR', '경남권 소비자 비중 (↓일수록 경남 외 소비 의존)', False),
     ('CPC', '1인당 월 소비액 (원) (↓일수록 구매력 약함)', False),
     ('STI', '계절 관광 의존도 (↑일수록 관광 의존)', True),
 ]
@@ -420,7 +408,7 @@ print("="*70)
 print(f"\n[핵심 인사이트]")
 print(f"  • MI 최저 (소비전환 취약 1위): {indicators['MI'].idxmin()} (MI={indicators['MI'].min():.3f})")
 print(f"  • MI 최고 (소비-유동 균형): {indicators['MI'].idxmax()} (MI={indicators['MI'].max():.3f})")
-print(f"  • LRR 최저 (외부유입 의존): {indicators['LRR'].idxmin()} ({indicators['LRR'].min():.3f})")
+print(f"  • LRR 최저 (경남 외 소비 의존): {indicators['LRR'].idxmin()} ({indicators['LRR'].min():.3f})")
 print(f"  • CPC 최저 (구매력 약함) : {indicators['CPC'].idxmin()} ({indicators['CPC'].min():,.0f}원/월)")
 print(f"  • CPC 최고 (구매력 높음) : {indicators['CPC'].idxmax()} ({indicators['CPC'].max():,.0f}원/월)")
 print(f"  • STI 최고 (관광 의존)   : {indicators['STI'].idxmax()} (STI={indicators['STI'].max():.3f})")

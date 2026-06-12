@@ -188,12 +188,12 @@ function rows(s, items, x, y, w, opt = {}) {
   s.addShape("rect", { x: 0.45, y: 2.35, w: 0.06, h: 1.05, fill: { color: K } });
   s.addText([
     { text: "MI (Mismatch Index)  =  ", options: { bold: true, fontSize: 17 } },
-    { text: "Log( 연간매출 / 연평균 생활인구 ) − 13곳 평균", options: { fontSize: 17 } },
+    { text: "ln( 연간매출 / 연평균 생활인구 ) − 13곳 평균", options: { fontSize: 17 } },
   ], { x: 0.85, y: 2.35, w: 11.8, h: 1.05, fontFace: FONT, color: K, valign: "middle" });
   rows(s, [
     "분모가 정주인구가 아니라 생활인구 — 실제 체류 흐름 기준 (「인구감소지역 지원 특별법」 2022 공식 지표)",
     "생활인구는 등록인구의 약 4배(통계청 2024) — 정주인구 기준 분석은 체류 흐름을 크게 과소평가",
-    "음수 = 방문 대비 소비 부진(소비전환 취약) — 13곳 상대 비교 지표",
+    "직관 환산: e^MI = 평균적 지역 대비 배율 — 합천(−1.016)은 평균의 1/3, 통영(+1.015)은 2.8배",
     "기존 상권분석은 생활인구를 ‘규모’로만 활용 — 소비 전환 효율은 어디서도 측정하지 않았다",
   ], 0.75, 3.85, 11.9, { gap: 0.68, size: 13.5 });
 }
@@ -206,7 +206,7 @@ function rows(s, items, x, y, w, opt = {}) {
   const c1 = { fontFace: FONT, fontSize: 10.5, bold: true, color: K, valign: "middle" };
   const c2 = { fontFace: FONT, fontSize: 10.5, color: MID, valign: "middle" };
   const rowsData = [
-    ["★ MI", "Log(연간매출/연평균 생활인구) − 13곳 평균", "음수 = 소비전환 취약"],
+    ["★ MI", "ln(연간매출/연평균 생활인구) − 13곳 평균", "음수 = 소비전환 취약 (e^MI = 평균 대비 배율)"],
     ["★ CPC", "연간매출 / 생활인구 / 12", "방문 1인당 월 소비 흡수력"],
     ["★ STI", "성수기(6~8월)/비수기(1~3월) 생활인구 − 1", "높음 = 관광·계절 의존"],
     ["LRR", "유입지가 경남인 매출 / 전체", "낮음 = 외부유입 소비 의존"],

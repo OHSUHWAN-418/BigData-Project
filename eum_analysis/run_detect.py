@@ -161,20 +161,45 @@ print("\n  시군별 MI 하락 구조동인 Top1 (음수=불일치 심화):")
 for name, r in drivers.iterrows():
     print(f"    {name}: {r['동인1']} ({r['기여1']:+.3f})")
 
-# --- Figure 8: 전역 SHAP 중요도 막대 ---
-fig, ax = plt.subplots(figsize=(9, 6))
+# --- Figure 8: (좌) 전역 SHAP 중요도 + (우) 침체 시군별 SHAP 분해 히트맵 ---
+fig, (ax, ax2) = plt.subplots(1, 2, figsize=(13.5, 5.8),
+                              gridspec_kw={'width_ratios': [1, 1.25]})
 gi = glob_imp.sort_values()
 ax.barh(range(len(gi)), gi.values, color='#2A6F97')
 ax.set_yticks(range(len(gi)))
 ax.set_yticklabels([GLOSS.get(f, f) for f in gi.index], fontsize=10)
-ax.set_xlabel('평균 |SHAP| (MI 설명 기여도)', fontsize=12, fontweight='bold')
-ax.set_title('이음-Detect ② 소비-유동 불일치(MI)의 구조적 동인\n'
-             'RandomForest + SHAP (탐색적, n=13)', fontsize=14, fontweight='bold')
+ax.set_xlabel('평균 |SHAP| (MI 설명 기여도)', fontsize=11, fontweight='bold')
+ax.set_title('(a) 전역 동인 — 무엇이 MI를 움직이나', fontsize=12, fontweight='bold')
 ax.grid(axis='x', alpha=0.3)
-plt.tight_layout()
+
+# 우측: MI 음수(침체) 시군 × 7지표 SHAP 히트맵, 행별 1순위(최소) 동인 ★
+neg_regions = y[y < 0].sort_values().index.tolist()       # MI 낮은 순
+hm = shap_df.loc[neg_regions, features]
+vmax = abs(hm.values).max()
+im = ax2.imshow(hm.values, cmap='RdBu', vmin=-vmax, vmax=vmax, aspect='auto')
+ax2.set_xticks(range(len(features)))
+ax2.set_xticklabels(features, fontsize=10)
+ax2.set_yticks(range(len(neg_regions)))
+ax2.set_yticklabels(neg_regions, fontsize=11)
+for i, name in enumerate(neg_regions):
+    j = int(np.argmin(hm.loc[name].values))               # 가장 음수 = 1순위 하락 동인
+    ax2.add_patch(plt.Rectangle((j - 0.5, i - 0.5), 1, 1, fill=False,
+                                edgecolor='#111111', lw=2.2))
+    ax2.text(j, i, '★', ha='center', va='center', fontsize=13, color='#111111')
+    for k in range(len(features)):
+        v = hm.iloc[i, k]
+        if abs(v) >= 0.05 and k != j:
+            ax2.text(k, i, f'{v:+.2f}', ha='center', va='center', fontsize=8,
+                     color='#333333')
+ax2.set_title('(b) 침체 시군별 동인 분해 — ★ = MI 하락 1순위', fontsize=12, fontweight='bold')
+cb = fig.colorbar(im, ax=ax2, fraction=0.04, pad=0.02)
+cb.set_label('SHAP (음수 = MI 하락 기여)', fontsize=9)
+fig.suptitle('이음-Detect ② 생활인구 대비 카드소비 부족(MI)의 구조적 동인 — RandomForest + SHAP (탐색적, n=13)',
+             fontsize=13.5, fontweight='bold')
+plt.tight_layout(rect=[0, 0, 1, 0.94])
 plt.savefig(OUT / 'p2_fig8_shap_importance.png', dpi=150, bbox_inches='tight')
 plt.close()
-print("  ✓ p2_fig8_shap_importance.png")
+print("  ✓ p2_fig8_shap_importance.png (2패널: 전역 + 시군별)")
 
 print("\n[산출 파일]")
 for f in ['detect_risk_factors.csv', 'detect_shap_drivers.csv',

@@ -81,3 +81,42 @@ plt.savefig(OUT / 'p2_fig13_hadong_shop.png', dpi=150, bbox_inches='tight')
 plt.close()
 print("\n  ✓ p2_fig13_hadong_shop.png")
 print(f"  ✓ {OUT / 'hadong_shop.csv'}")
+
+# ============================================================
+# Part 2. 개선 카드 4곳(하동·합천·남해·거창) 읍·면 체류 인프라 — 2×2 패널
+# ============================================================
+CARD_REGIONS = ['하동군', '합천군', '남해군', '거창군']
+fig, axes = plt.subplots(2, 2, figsize=(13.2, 9.2))
+print("\n[개선 카드 4곳 읍·면 체류 인프라]")
+for ax, region in zip(axes.flat, CARD_REGIONS):
+    r0 = df[df['시군구명'] == region]
+    g2 = r0.groupby('행정동명').agg(
+        점포수=('상권업종대분류명', 'size'),
+        체류수=('상권업종대분류명', lambda s: s.isin(STAY).sum()),
+    )
+    g2['체류비중'] = (g2['체류수'] / g2['점포수'] * 100).round(1)
+    total = r0['상권업종대분류명'].isin(STAY).sum() / len(r0) * 100
+    mx2, my2 = g2['점포수'].median(), g2['체류비중'].median()
+    gaps = []
+    for name, r in g2.iterrows():
+        gap = (r['점포수'] >= mx2) and (r['체류비중'] < my2)
+        hub = r['체류비중'] >= 25
+        if gap:
+            gaps.append(name)
+        c = '#A30015' if gap else ('#2A9D8F' if hub else '#9AA0A6')
+        ax.scatter(r['점포수'], r['체류비중'], s=70, c=c, edgecolors='black', linewidth=0.7, zorder=3)
+        ax.annotate(name, (r['점포수'], r['체류비중']), fontsize=7.5, xytext=(4, 3), textcoords='offset points')
+    ax.axvline(mx2, color='gray', ls='--', alpha=0.4)
+    ax.axhline(my2, color='gray', ls='--', alpha=0.4)
+    ax.set_title(f"{region} — 전체 체류비중 {total:.1f}%", fontsize=12, fontweight='bold')
+    ax.grid(alpha=0.25)
+    ax.tick_params(labelsize=8)
+    print(f"  {region}: 전체 {total:.1f}% / 공백(점포多·체류少): {', '.join(gaps) if gaps else '없음'}")
+fig.supxlabel('읍·면 점포 수', fontsize=11, fontweight='bold')
+fig.supylabel('체류 인프라 비중 (숙박+여가, %)', fontsize=11, fontweight='bold')
+fig.suptitle('개선 카드 4곳의 읍·면별 체류 인프라 분포 — 빨강 = 점포 많고 체류 적음(공백), 초록 = 체류 거점',
+             fontsize=13, fontweight='bold')
+plt.tight_layout(rect=[0.015, 0.015, 1, 0.96])
+plt.savefig(OUT / 'p2_fig13b_shop_4regions.png', dpi=150, bbox_inches='tight')
+plt.close()
+print("  ✓ p2_fig13b_shop_4regions.png")

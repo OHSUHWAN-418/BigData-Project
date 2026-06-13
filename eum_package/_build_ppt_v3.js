@@ -151,7 +151,7 @@ function rows(s, items, x, y, w, opt = {}) {
 /* ════════ 6. 03 두 가지 발견 ════════ */
 {
   const s = pptx.addSlide(); deco(s);
-  head(s, "03 · 데이터 분석", "데이터가 보여준 두 가지", "가설 없이 데이터를 먼저 보았다 — 두 관찰이 연구의 방향을 결정했다");
+  head(s, "03 · 데이터 분석", "데이터가 보여준 두 가지", "가설 없이 데이터를 먼저 보았다 — 두 정보가 연구의 방향을 결정했다");
   s.addText([
     { text: "발견 ①  인구감소지역 안에도 양극화 — 7.6배\n", options: { bold: true, fontSize: 15.5, color: K } },
     { text: "방문 1인당 월 소비: 합천 11,380원 vs 통영 86,764원. 같은 군 단위인 거창과 합천도 5.7배.", options: { fontSize: 12, color: MID } },
@@ -201,7 +201,7 @@ function rows(s, items, x, y, w, opt = {}) {
 /* ════════ 9. 04 지표 체계 ════════ */
 {
   const s = pptx.addSlide(); deco(s);
-  head(s, "04 · 이음(E-um)의 설계", "9개 지표 체계", "3장의 관찰을 그대로 산식으로 — ★ 생활인구 결합으로 새로 가능해진 핵심 지표");
+  head(s, "04 · 이음(E-um)의 설계", "9개 지표 체계", "3장의 정보를 그대로 산식으로 — ★ 생활인구 결합으로 새로 가능해진 핵심 지표");
   const th = { fill: { color: K }, color: "FFFFFF", bold: true, fontFace: FONT, fontSize: 11, align: "center", valign: "middle" };
   const c1 = { fontFace: FONT, fontSize: 10.5, bold: true, color: K, valign: "middle" };
   const c2 = { fontFace: FONT, fontSize: 10.5, color: MID, valign: "middle" };
